@@ -1,0 +1,34 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Angular build
+dist/
+build/
+
+# Environment variables
+.env
+.env.*
+
+# Logs
+logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+
+# Jenkins
+.jenkins/
+
+# MongoDB local data
+mongo_data/
+
+# IDE
+.vscode/
+.idea/
