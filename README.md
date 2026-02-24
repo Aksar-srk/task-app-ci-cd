@@ -130,9 +130,9 @@ Upload Docker images to Docker Hub for centralized storage.
 #### 🔹 Deploy
 Pull the latest images on the EC2 instance and restart containers using Docker Compose.
 
-![Upload Flow](images/ImageUpload.png)
+![Upload Flow](images/app-server.png)
 
-![Upload Flow](images/ImageUpload.png)
+![Upload Flow](images/jenkins-unlock.png)
 
 ---
 
@@ -312,4 +312,4 @@ Updated `docker-compose.yml` to use the correct Docker Hub images:
 image: aksarsr/dd-frontend
 image: aksarsr/dd-backend
 ```
-![Upload Flow](images/ImageUpload.png)
+![Upload Flow](images/bad-gateway.png)
