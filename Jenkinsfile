@@ -2,52 +2,64 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_USER = "yourdockerhub"
-        BACKEND_IMAGE = "mean-backend"
-        FRONTEND_IMAGE = "mean-frontend"
-        COMPOSE_DIR = "/home/ubuntu/discover-dollar-mean-devops"
+        DOCKER_USER = "aksarsr"              // 🔁 change to your Docker Hub username
+        BACKEND_IMAGE = "dd-backend"
+        FRONTEND_IMAGE = "dd-frontend"
+        APP_DIR = "/home/ubuntu/task-app-ci-cd"  // 🔁 path on VM after clone
     }
 
     stages {
 
-        stage('Clone Repo') {
+        stage('Checkout Code') {
             steps {
-                git 'https://github.com/<your-username>/discover-dollar-mean-devops.git'
+                git 'https://github.com/Aksar-srk/task-app-ci-cd.git'
             }
         }
 
         stage('Docker Login') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds',
-                usernameVariable: 'USER', passwordVariable: 'PASS')]) {
-                    sh 'echo $PASS | docker login -u $USER --password-stdin'
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKER_USER_NAME',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER_NAME --password-stdin'
                 }
             }
         }
 
-        stage('Build Images') {
+        stage('Build Docker Images') {
             steps {
                 sh 'docker build -t $DOCKER_USER/$BACKEND_IMAGE ./backend'
                 sh 'docker build -t $DOCKER_USER/$FRONTEND_IMAGE ./frontend'
             }
         }
 
-        stage('Push Images') {
+        stage('Push Images to Docker Hub') {
             steps {
                 sh 'docker push $DOCKER_USER/$BACKEND_IMAGE'
                 sh 'docker push $DOCKER_USER/$FRONTEND_IMAGE'
             }
         }
 
-        stage('Deploy Latest Containers') {
+        stage('Deploy Application') {
             steps {
                 sh '''
-                cd $COMPOSE_DIR
+                cd $APP_DIR
                 docker-compose down
                 docker-compose pull
                 docker-compose up -d
                 '''
             }
+        }
+    }
+
+    post {
+        success {
+            echo '✅ Deployment Successful!'
+        }
+        failure {
+            echo '❌ Deployment Failed. Check logs.'
         }
     }
 }
