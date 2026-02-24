@@ -2,19 +2,12 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_USER = "aksarsr"              // 🔁 change to your Docker Hub username
+        DOCKER_USER = "aksarsr"
         BACKEND_IMAGE = "dd-backend"
         FRONTEND_IMAGE = "dd-frontend"
-        APP_DIR = "/home/ubuntu/task-app-ci-cd"  // 🔁 path on VM after clone
     }
 
     stages {
-
-        stage('Checkout Code') {
-            steps {
-                git 'https://github.com/Aksar-srk/task-app-ci-cd.git'
-            }
-        }
 
         stage('Docker Login') {
             steps {
@@ -45,7 +38,6 @@ pipeline {
         stage('Deploy Application') {
             steps {
                 sh '''
-                cd $APP_DIR
                 docker-compose down
                 docker-compose pull
                 docker-compose up -d
