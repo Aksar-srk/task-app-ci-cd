@@ -17,7 +17,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    image: rajgagan10/dd-backend:latest
+    image: aksarsr/dd-backend:latest
     container_name: dd-backend
     restart: always
     environment:
@@ -34,7 +34,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    image: rajgagan10/dd-frontend:latest
+    image: aksarsr/dd-frontend:latest
     container_name: dd-frontend
     restart: always
     depends_on:
@@ -61,4 +61,5 @@ volumes:
 
 networks:
   dd-network:
+
     driver: bridge
