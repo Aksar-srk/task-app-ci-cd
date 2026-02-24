@@ -10,50 +10,35 @@
 The following diagram illustrates the automated CI/CD flow from the developer's local machine to the AWS EC2 production environment.
 
 ```text
-                ┌──────────────┐
-                │   Developer  │
-                │   (Git Push) │
-                └──────┬───────┘
-                       │
-                       ▼
-               ┌──────────────┐
-               │   GitHub     │
-               │   Repository │
-               └──────┬───────┘
-                      │ Webhook
-                      ▼
-               ┌──────────────┐
-               │   Jenkins    │
-               │   CI/CD      │
-               └──────┬───────┘
-                      │ Build & Push
-                      ▼
-               ┌──────────────┐
-               │ Docker Hub   │
-               │   Images     │
-               └──────┬───────┘
-                      │ Pull
-                      ▼
-        ┌────────────────────────────┐
-        │        AWS EC2 VM          │
-        │                            │
-        │  ┌──────────────┐          │
-        │  │ Docker Compose│         │
-        │  └──────┬───────┘          │
-        │         │                  │
-        │ ┌───────▼───────┐         │
-        │ │    Nginx       │  :80    │
-        │ └──────┬────────┘         │
-        │        │ Reverse Proxy     │
-        │  ┌─────▼──────┐  ┌───────▼──────┐
-        │  │ Frontend   │  │ Backend      │
-        │  │ Angular    │  │ Node/Express │
-        │  └────────────┘  └──────┬───────┘
-        │                           │
-        │                     ┌─────▼──────┐
-        │                     │  MongoDB   │
-        │                     └────────────┘
-        └────────────────────────────┘
+               
+
+Developer
+│
+│ Git Push
+▼
+GitHub Repository
+│
+│ Webhook Trigger
+▼
+Jenkins (CI/CD on AWS EC2)
+│
+├── Build Docker Image
+├── Push to Docker Hub
+└── Deploy with Docker Compose
+│
+▼
+┌──────────────────────┐
+│ AWS EC2 VM │
+│ │
+│ Application │
+│ (Docker Containers)│
+│ │
+│ Exposed via │
+│ Nginx :80 │
+└──────────────────────┘
+│
+▼
+End Users
 
 ```
 ## 🛠️ Tech Stack
@@ -92,6 +77,8 @@ The backend service is containerized using Node.js to run the Express API.
 ### 📍 Frontend Dockerfile (`frontend/Dockerfile`)
 The frontend uses a **multi-stage build** to keep the production image lightweight and optimized for deployment.
 
+![Upload Flow](images/cli-docker-ps.png)
+
 ---
 
 ## 3️⃣ Docker Hub Integration
@@ -105,6 +92,7 @@ docker build -t aksarsr/dd-frontend ./frontend
 docker push aksarsr/dd-backend
 docker push aksarsr/dd-frontend
 ```
+![Upload Flow](images/docker-hub.png)
 ## 4️⃣ Docker Compose Deployment
 
 The `docker-compose.yml` file manages the lifecycle of all services, including:
@@ -141,6 +129,10 @@ Upload Docker images to Docker Hub for centralized storage.
 
 #### 🔹 Deploy
 Pull the latest images on the EC2 instance and restart containers using Docker Compose.
+
+![Upload Flow](images/ImageUpload.png)
+
+![Upload Flow](images/ImageUpload.png)
 
 ---
 
@@ -187,10 +179,137 @@ This helps monitor pipeline progress and debug failures quickly.
 
 ## 🔗 GitHub Webhook Configuration
 
-To enable automatic pipeline triggers on code changes:
+To enable automatic pipeline triggers on code changes, GitHub Webhooks were configured.
+
+---
+
+### 🔹 Before: Using Poll SCM Trigger
+
+Initially, Jenkins was configured with **Poll SCM**:
+
+This made Jenkins check the repository every minute for changes.
+
+#### ❌ Limitations of Poll SCM
+- Inefficient — Jenkins continuously polls GitHub even when there are no changes.
+- Delayed builds — pipeline runs based on schedule, not instantly.
+- Higher resource usage on Jenkins.
+
+![Upload Flow](images/stage-view-11.png)
+![Upload Flow](images/console-11-output.png)
+
+
+---
+
+### 🔹 After: Using GitHub Webhook (Recommended)
+
+To meet the assignment requirement and improve efficiency, GitHub Webhooks were configured.
+
+#### Webhook Settings
+
+- **Payload URL:** `http://<EC2-IP>:8080/github-webhook/`
+- **Content Type:** `application/json`
+- **Trigger:** Push events
+
+Now, whenever code is pushed to GitHub, Jenkins is triggered instantly.
+![Upload Flow](images/stage-view-12.png)
+![Upload Flow](images/console-12-output.png)
+
+#### ✅ Advantages of Webhooks over Poll SCM
+
+- Real-time pipeline execution.
+- No unnecessary polling → efficient resource usage.
+- Faster feedback for developers.
+- Industry-standard CI/CD practice.
+
+📸 _Add screenshots:_
+- GitHub webhook settings
+- Successful webhook delivery
+- Jenkins pipeline triggered by GitHub push
+
+---
+
+### 🔄 Before vs After Summary
+
+| Feature | Poll SCM | Webhook |
+|--------|---------|---------|
+| Trigger type | Scheduled polling | Event-based |
+| Speed | Delayed | Instant |
+| Resource usage | High | Low |
+| Industry best practice | ❌ | ✅ |
+
+## 🖥️ Final Application UI
+
+The MEAN stack application is successfully deployed and accessible 
+
+![Upload Flow](images/ui-app.png)
+
+🌐 **Live URL:**  
+👉 http://ec-2-public-ip
+
+
+
+## 🐞 Issues Faced & Fixes
+
+This section highlights real-world issues encountered during deployment and how they were resolved.
+
+---
+
+### ❌ Issue 1: Docker Permission Denied
+
+**Error**
+permission denied while trying to connect to Docker daemon
+
+**Cause**  
+The Jenkins user did not have permission to access the Docker daemon.
+
+**Fix**
+```bash
+sudo usermod -aG docker jenkins
+sudo systemctl restart jenkins
+```
+![Upload Flow](images/cli-2.png)
+
+### ❌ Issue 2: Dockerfile Empty Error
+
+**Error**
+Dockerfile cannot be empty
+
+**Cause**  
+The Dockerfile existed but contained no instructions.
+
+**Fix**
+- Added proper Dockerfile instructions.
+- Committed the changes.
+- Pushed the updated code to GitHub to trigger the CI/CD pipeline.
 
 - **Payload URL:** `http://<EC2-IP>:8080/github-webhook/`
 - **Content Type:** `application/json`
 - **Trigger:** Push events
 
 Once configured, every GitHub push triggers the Jenkins pipeline automatically.
+### ❌ Issue 3: Nginx Mount Error
+
+**Error**
+not a directory: mounting nginx.conf
+
+**Cause**  
+`nginx.conf` was mistakenly created as a directory instead of a file.
+
+**Fix**
+```bash
+rm -rf nginx/nginx.conf
+touch nginx/nginx.conf
+```
+### ❌ Issue 4: 502 Bad Gateway
+
+**Cause**  
+Nginx was routing traffic to incorrect container images.
+
+**Fix**
+Updated `docker-compose.yml` to use the correct Docker Hub images:
+
+```yaml
+image: aksarsr/dd-frontend
+image: aksarsr/dd-backend
+```
+![Upload Flow](images/ImageUpload.png)
